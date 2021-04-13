@@ -1,0 +1,161 @@
+package com.sarahisweird.memerbot;
+
+import discord4j.common.util.Snowflake;
+import discord4j.core.DiscordClientBuilder;
+import discord4j.core.GatewayDiscordClient;
+import discord4j.core.event.domain.lifecycle.ReadyEvent;
+import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.event.domain.message.ReactionAddEvent;
+import discord4j.core.object.entity.Attachment;
+import discord4j.core.object.entity.Member;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.User;
+import discord4j.core.object.entity.channel.Channel;
+import discord4j.core.object.reaction.Reaction;
+import discord4j.core.object.reaction.ReactionEmoji;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+public class Main {
+    private static final Snowflake memeArchiveId = Snowflake.of("775720910904623135");
+    private static final Snowflake updootId = Snowflake.of("826104904057356298");
+    private static final Snowflake downdootId = Snowflake.of("826104891843805205");
+    private static final List<String> admins = List.of("116927399760756742", "260473563310587904");
+
+    private static Channel memeArchive;
+
+    private static final List<Snowflake> memes = new ArrayList<>();
+
+    private static final File memeStore = new File("memes.csv");
+
+    private static boolean messageContainsPicture(Message message) {
+        return message.getAttachments().stream().anyMatch(attachment -> attachment.getWidth().isPresent());
+    }
+
+    private static Attachment collapseAttachmentSet(Set<Attachment> attachmentSet) {
+        return (Attachment) attachmentSet.stream().filter(att -> att.getWidth().isPresent()).toArray()[0];
+    }
+
+    public static void main(String[] args) {
+        if (memeStore.exists()) {
+            try {
+                String[] memeIds = Files.readString(memeStore.toPath()).split("\n");
+
+                for (String id : memeIds)
+                    memes.add(Snowflake.of(id));
+            } catch (IOException e) {
+                System.err.println("Couldn't read memes to file!");
+                e.printStackTrace();
+            }
+        }
+
+        GatewayDiscordClient client = DiscordClientBuilder
+                .create(System.getenv("memerbot_token"))
+                .build()
+                .login()
+                .block();
+
+        if (client == null) {
+            System.err.println("Couldn't create bot!");
+            System.exit(1);
+        }
+
+        client.getEventDispatcher().on(ReadyEvent.class).subscribe(event -> {
+            memeArchive = client.getChannelById(memeArchiveId).block();
+
+            final User self = event.getSelf();
+
+            System.out.println("Logged in as " + self.getUsername() + "#" + self.getDiscriminator() + ".");
+        });
+
+        client.getEventDispatcher().on(MessageCreateEvent.class)
+                .filter(event -> event.getMessage().getContent().equalsIgnoreCase("#quit"))
+                .map(MessageCreateEvent::getMember)
+                .map(member -> member.map(Member::getId).map(Snowflake::asString).orElse(""))
+                .filter(memberId -> admins.stream().anyMatch(id -> id.equals(memberId)))
+                .subscribe(memberId -> client.logout().subscribe());
+
+        client.getEventDispatcher().on(MessageCreateEvent.class)
+                .map(MessageCreateEvent::getMessage)
+                .filter(Main::messageContainsPicture)
+                .map(Message::getAttachments)
+                .filter(set -> set.size() == 1)
+                .map(Main::collapseAttachmentSet)
+                .map(Attachment::getId)
+                .subscribe(memes::add);
+
+        client.getEventDispatcher().on(ReactionAddEvent.class)
+                .subscribe(event -> {
+                    Message msg = event.getMessage().block();
+                    if (msg == null)
+                        return;
+
+                    Optional<User> authorOpt = msg.getAuthor();
+                    if (authorOpt.isEmpty())
+                        return;
+
+                    User author = authorOpt.get();
+
+                    if (author.getId().equals(client.getSelfId()))
+                        return;
+
+                    if (!messageContainsPicture(msg))
+                        return;
+
+                    Attachment attachment = collapseAttachmentSet(msg.getAttachments());
+
+                    if (memes.stream().noneMatch(id -> id.equals(attachment.getId())))
+                        return;
+
+                    int votes = 0;
+
+                    for (Reaction reaction : msg.getReactions()) {
+                        Optional<ReactionEmoji.Custom> reactionEmoji = reaction.getEmoji().asCustomEmoji();
+
+                        if (reactionEmoji.isEmpty())
+                            continue;
+
+                        Snowflake id = reactionEmoji.get().getId();
+
+                        if (id.equals(updootId))
+                            votes++;
+
+                        if (id.equals(downdootId))
+                            votes--;
+                    }
+
+                    if (votes < 1)
+                        return;
+
+                    memeArchive.getRestChannel().createMessage(attachment.getUrl()).subscribe();
+
+                    memes.remove(attachment.getId());
+                });
+
+        client.onDisconnect().block();
+
+        StringBuilder memeCSV = new StringBuilder();
+
+        if (memes.size() != 0) {
+            for (Snowflake id : memes) {
+                if (memeCSV.length() != 0)
+                    memeCSV.append("\n");
+
+                memeCSV.append(id.asString());
+            }
+        }
+
+        try {
+            Files.writeString(memeStore.toPath(), memeCSV.toString());
+        } catch (IOException e) {
+            System.err.println("Couldn't write memes to file!");
+            e.printStackTrace();
+        }
+    }
+}
