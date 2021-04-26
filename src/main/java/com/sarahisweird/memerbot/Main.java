@@ -13,7 +13,6 @@ import discord4j.core.object.entity.User;
 import discord4j.core.object.entity.channel.Channel;
 import discord4j.core.object.reaction.Reaction;
 import discord4j.core.object.reaction.ReactionEmoji;
-import discord4j.discordjson.json.gateway.StatusUpdate;
 
 import java.io.File;
 import java.io.IOException;
@@ -126,7 +125,7 @@ public class Main {
                             votes -= reaction.getCount();
                     }
 
-                    if (votes < 2)
+                    if (votes < 1)
                         return;
 
                     memeArchive.getRestChannel().createMessage(
@@ -140,7 +139,7 @@ public class Main {
 
         StringBuilder memeCSV = new StringBuilder();
 
-        if (memes.size() != 0) {
+        if (!memes.isEmpty()) {
             for (String id: memes) {
                 if (memeCSV.length() != 0)
                     memeCSV.append("\n");
