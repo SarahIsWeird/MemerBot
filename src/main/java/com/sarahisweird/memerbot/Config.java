@@ -7,10 +7,9 @@ import discord4j.core.object.reaction.ReactionEmoji;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Config {
     private static Config instance;
@@ -26,8 +25,8 @@ public class Config {
 
     private Config() {
         try {
-            json = new JSONObject(Files.readString(Path.of("config.json")));
-        } catch (IOException e) {
+            json = Util.deserializeJSONFromStream(Objects.requireNonNull(Main.class.getResource("config.json")).openStream());
+        } catch (IOException | NullPointerException e) {
             System.err.println("Couldn't read the config file!");
             e.printStackTrace();
             System.exit(1);
