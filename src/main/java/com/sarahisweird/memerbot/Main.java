@@ -20,7 +20,8 @@ import java.nio.file.Files;
 import java.util.*;
 
 public class Main {
-    private static final Snowflake memeArchiveId = Snowflake.of("775720910904623135");
+    private static final Snowflake memeArchiveId_release = Snowflake.of("775720910904623135");
+    private static final Snowflake memeArchiveId_debug = Snowflake.of("831531360749355078");
     private static final Snowflake updootId = Snowflake.of("826104904057356298");
     private static final Snowflake downdootId = Snowflake.of("826104891843805205");
     private static final List<String> admins = List.of("116927399760756742", "260473563310587904");
@@ -40,6 +41,10 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        Snowflake memeArchiveId = (args.length > 0) && args[1].equalsIgnoreCase("debug")
+                ? memeArchiveId_debug
+                : memeArchiveId_release;
+
         if (memeStore.exists()) {
             try {
                 String[] memeIds = Files.readString(memeStore.toPath()).split("\n");
