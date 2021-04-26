@@ -6,9 +6,19 @@
         "260473563310587904"
     ],
 
+    "prefix": {
+        "debug": "##",
+        "release": "#"
+    },
+
     "memeArchive": {
         "debug": "831531360749355078",
         "release": "775720910904623135"
+    },
+
+    "requiredVotes": {
+        "debug": 1,
+        "release": 2
     },
 
     "emotes": {
@@ -26,6 +36,23 @@
         "Ich habe gelacht",
         "amogus moment o.o",
         "Not funny didn't haha",
-        "Hab ich schon vor drei Monaten auf 4chan gesehen."
-    ]
+        "Hab ich schon vor drei Monaten auf 4chan gesehen.",
+        "Dieser Pfoster bekommt ein Hochwähli.",
+        "r/ichbin40undlustig",
+        "Ich bin #user#, professioneller Clown.",
+        "Es ist #time#, und #user# erstellt Memes. Was ein Kek."
+    ],
+
+    "text": {
+        "upvotes": "Hochw\u00e4hlis",
+        "downvotes": "Runterw\u00e4hlis",
+
+        "time": {
+            "morning": "Vorlesungszeit",
+            "noon": "Essenszeit",
+            "afternoon": "Spielezeit",
+            "evening": "Heiazeit",
+            "night": "Nacht. Alle schlafen"
+        }
+    }
 }

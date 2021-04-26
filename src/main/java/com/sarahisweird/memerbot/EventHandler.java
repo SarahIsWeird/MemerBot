@@ -8,14 +8,10 @@ import discord4j.core.object.entity.Attachment;
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
-import discord4j.core.spec.MessageCreateSpec;
+import discord4j.core.spec.EmbedCreateSpec;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Optional;
 
 public class EventHandler extends ReactiveEventAdapter {
@@ -36,7 +32,7 @@ public class EventHandler extends ReactiveEventAdapter {
 
     @Override
     public Publisher<?> onMessageCreate(MessageCreateEvent event) {
-        if (event.getMessage().getContent().equalsIgnoreCase("#quit")) {
+        if (event.getMessage().getContent().equalsIgnoreCase(config.getPrefix() + "quit")) {
             Optional<Member> member = event.getMember();
 
             if (member.isEmpty())
@@ -55,22 +51,20 @@ public class EventHandler extends ReactiveEventAdapter {
         return Mono.empty();
     }
 
-    private int countVotes(Message msg) {
-        int votes = 0;
-
-        votes += msg.getReactors(config.getUpvoteEmote())
+    private Long countUpvotes(Message msg) {
+        return msg.getReactors(config.getUpvoteEmote())
                 .filter(user -> config.isDebug() || !user.equals(msg.getAuthor().orElse(null)))
                 .count()
                 .blockOptional()
                 .orElse(0L);
+    }
 
-        votes -= msg.getReactors(config.getDownvoteEmote())
+    private Long countDownvotes(Message msg) {
+        return msg.getReactors(config.getDownvoteEmote())
                 .filter(user -> config.isDebug() || !user.equals(msg.getAuthor().orElse(null)))
                 .count()
                 .blockOptional()
                 .orElse(0L);
-
-        return votes;
     }
 
     @Override
@@ -78,52 +72,35 @@ public class EventHandler extends ReactiveEventAdapter {
         return event.getMessage().map(msg -> {
             Optional<User> author = msg.getAuthor();
 
-            if (author.isEmpty())
+            if (author.isEmpty()) // Empty author, for whatever reason
                 return Mono.empty();
 
-            if (author.get().getId().equals(event.getClient().getSelfId()))
+            if (author.get().getId().equals(event.getClient().getSelfId())) // Don't wanna send messages by us
                 return Mono.empty();
 
-            if (!MemeStore.getInstance().isTracked(msg.getId()))
+            if (!MemeStore.getInstance().isTracked(msg.getId())) // Not tracked? Don't care
                 return Mono.empty();
 
             Attachment attachment = Util.collapseAttachmentSet(msg.getAttachments());
 
-            int votes = countVotes(msg);
+            Long upvotes = countUpvotes(msg);
+            Long downvotes = countDownvotes(msg);
 
-            if (votes < (config.isDebug() ? 1 : 2))
+            if (upvotes - downvotes < config.getRequiredVotes())
                 return Mono.empty();
 
-            URL fileUrl;
-            InputStream fileInputStream;
+            EmbedCreateSpec embedCreateSpec = new EmbedCreateSpec();
+            embedCreateSpec.setTitle(config.getRandomTitle(msg));
+            embedCreateSpec.setAuthor(
+                    author.get().getUsername() + "#" + author.get().getDiscriminator(),
+                    null,
+                    author.get().getAvatarUrl()
+            );
+            embedCreateSpec.setImage(attachment.getUrl());
+            embedCreateSpec.addField(config.getUpvoteText(), upvotes.toString(), true);
+            embedCreateSpec.addField(config.getDownvoteText(), downvotes.toString(), true);
 
-            try {
-                fileUrl = new URL(attachment.getUrl());
-                fileInputStream = fileUrl.openStream();
-            } catch (MalformedURLException e) {
-                System.err.println("Discord didn't give us a correct URL?");
-                e.printStackTrace();
-                return Mono.empty();
-            } catch (IOException e) {
-                System.err.println("Couldn't open stream to attachment!");
-                e.printStackTrace();
-                return Mono.empty();
-            }
-
-            MessageCreateSpec messageCreateSpec = new MessageCreateSpec();
-            messageCreateSpec.setContent(author.get().getMention());
-            messageCreateSpec.addFile(attachment.getFilename(), fileInputStream);
-
-            config.getMemeArchive().getRestChannel()
-                    .createMessage(messageCreateSpec.asRequest())
-                    .subscribe(msgData -> {
-                        try {
-                            fileInputStream.close();
-                        } catch (IOException e) {
-                            System.err.println("Couldn't close attachment stream!");
-                            e.printStackTrace();
-                        }
-                    });
+            config.getMemeArchive().getRestChannel().createMessage(embedCreateSpec.asRequest()).subscribe();
 
             MemeStore.getInstance().removeTracking(msg.getId());
 
