@@ -10,11 +10,15 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.discord4j:discord4j-core:3.1.5'
+    compile 'com.discord4j:discord4j-core:3.1.5'
 }
 
 jar {
     manifest {
         attributes 'Main-Class': 'com.sarahisweird.memerbot.Main'
+    }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }

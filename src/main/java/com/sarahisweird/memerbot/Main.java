@@ -13,14 +13,12 @@ import discord4j.core.object.entity.User;
 import discord4j.core.object.entity.channel.Channel;
 import discord4j.core.object.reaction.Reaction;
 import discord4j.core.object.reaction.ReactionEmoji;
+import discord4j.discordjson.json.gateway.StatusUpdate;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 public class Main {
     private static final Snowflake memeArchiveId = Snowflake.of("775720910904623135");
@@ -30,7 +28,7 @@ public class Main {
 
     private static Channel memeArchive;
 
-    private static final List<Snowflake> memes = new ArrayList<>();
+    private static final List<String> memes = new ArrayList<>();
 
     private static final File memeStore = new File("memes.csv");
 
@@ -47,17 +45,17 @@ public class Main {
             try {
                 String[] memeIds = Files.readString(memeStore.toPath()).split("\n");
 
-                for (String id : memeIds)
-                    memes.add(Snowflake.of(id));
+                if (!"".equals(memeIds[0]))
+                    memes.addAll(Arrays.asList(memeIds));
             } catch (IOException e) {
                 System.err.println("Couldn't read memes to file!");
                 e.printStackTrace();
             }
         }
 
-        GatewayDiscordClient client = DiscordClientBuilder
-                .create(System.getenv("memerbot_token"))
+        GatewayDiscordClient client = DiscordClientBuilder.create(System.getenv("memerbot_token"))
                 .build()
+                .gateway()
                 .login()
                 .block();
 
@@ -84,15 +82,13 @@ public class Main {
         client.getEventDispatcher().on(MessageCreateEvent.class)
                 .map(MessageCreateEvent::getMessage)
                 .filter(Main::messageContainsPicture)
-                .map(Message::getAttachments)
-                .filter(set -> set.size() == 1)
-                .map(Main::collapseAttachmentSet)
-                .map(Attachment::getId)
+                .map(Message::getId)
+                .map(Snowflake::asString)
                 .subscribe(memes::add);
 
         client.getEventDispatcher().on(ReactionAddEvent.class)
                 .subscribe(event -> {
-                    Message msg = event.getMessage().block();
+                    Message msg = client.getMessageById(event.getChannelId(), event.getMessageId()).block();
                     if (msg == null)
                         return;
 
@@ -108,10 +104,10 @@ public class Main {
                     if (!messageContainsPicture(msg))
                         return;
 
-                    Attachment attachment = collapseAttachmentSet(msg.getAttachments());
-
-                    if (memes.stream().noneMatch(id -> id.equals(attachment.getId())))
+                    if (memes.stream().noneMatch(id -> id.equals(msg.getId().asString())))
                         return;
+
+                    Attachment attachment = collapseAttachmentSet(msg.getAttachments());
 
                     int votes = 0;
 
@@ -124,18 +120,20 @@ public class Main {
                         Snowflake id = reactionEmoji.get().getId();
 
                         if (id.equals(updootId))
-                            votes++;
+                            votes += reaction.getCount();
 
                         if (id.equals(downdootId))
-                            votes--;
+                            votes -= reaction.getCount();
                     }
 
-                    if (votes < 1)
+                    if (votes < 2)
                         return;
 
-                    memeArchive.getRestChannel().createMessage(attachment.getUrl()).subscribe();
+                    memeArchive.getRestChannel().createMessage(
+                            msg.getAuthor().get().getMention() + "\n" + attachment.getUrl()
+                    ).subscribe();
 
-                    memes.remove(attachment.getId());
+                    memes.remove(msg.getId().asString());
                 });
 
         client.onDisconnect().block();
@@ -143,11 +141,11 @@ public class Main {
         StringBuilder memeCSV = new StringBuilder();
 
         if (memes.size() != 0) {
-            for (Snowflake id : memes) {
+            for (String id: memes) {
                 if (memeCSV.length() != 0)
                     memeCSV.append("\n");
 
-                memeCSV.append(id.asString());
+                memeCSV.append(id);
             }
         }
 
