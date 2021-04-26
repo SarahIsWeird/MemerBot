@@ -11,11 +11,14 @@ import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.entity.channel.Channel;
-import discord4j.core.object.reaction.Reaction;
 import discord4j.core.object.reaction.ReactionEmoji;
+import discord4j.core.spec.MessageCreateSpec;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.util.*;
 
@@ -23,7 +26,9 @@ public class Main {
     private static final Snowflake memeArchiveId_release = Snowflake.of("775720910904623135");
     private static final Snowflake memeArchiveId_debug = Snowflake.of("831531360749355078");
     private static final Snowflake updootId = Snowflake.of("826104904057356298");
+    private static final ReactionEmoji updootReaction = ReactionEmoji.custom(updootId, "updoot", false);
     private static final Snowflake downdootId = Snowflake.of("826104891843805205");
+    private static final ReactionEmoji downdootReaction = ReactionEmoji.custom(downdootId, "downdoot", false);
     private static final List<String> admins = List.of("116927399760756742", "260473563310587904");
 
     private static Channel memeArchive;
@@ -41,9 +46,14 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        Snowflake memeArchiveId = (args.length > 0) && args[1].equalsIgnoreCase("debug")
+        boolean isDebug = (args.length > 0) && args[0].equalsIgnoreCase("debug");
+        Snowflake memeArchiveId = isDebug
                 ? memeArchiveId_debug
                 : memeArchiveId_release;
+
+        if (isDebug) {
+            System.out.println("Running in debug mode!");
+        }
 
         if (memeStore.exists()) {
             try {
@@ -115,27 +125,51 @@ public class Main {
 
                     int votes = 0;
 
-                    for (Reaction reaction : msg.getReactions()) {
-                        Optional<ReactionEmoji.Custom> reactionEmoji = reaction.getEmoji().asCustomEmoji();
+                    votes += msg.getReactors(updootReaction)
+                            .filter(user -> isDebug || !user.equals(author))
+                            .count()
+                            .blockOptional()
+                            .orElse(0L);
 
-                        if (reactionEmoji.isEmpty())
-                            continue;
+                    votes -= msg.getReactors(downdootReaction)
+                            .filter(user -> isDebug || !user.equals(author))
+                            .count()
+                            .blockOptional()
+                            .orElse(0L);
 
-                        Snowflake id = reactionEmoji.get().getId();
-
-                        if (id.equals(updootId))
-                            votes += reaction.getCount();
-
-                        if (id.equals(downdootId))
-                            votes -= reaction.getCount();
-                    }
-
-                    if (votes < 1)
+                    if (votes < (isDebug ? 1 : 2))
                         return;
 
-                    memeArchive.getRestChannel().createMessage(
-                            msg.getAuthor().get().getMention() + "\n" + attachment.getUrl()
-                    ).subscribe();
+                    URL fileUrl;
+                    InputStream fileInputStream;
+
+                    try {
+                        fileUrl = new URL(attachment.getUrl());
+                        fileInputStream = fileUrl.openStream();
+                    } catch (MalformedURLException e) {
+                        System.err.println("Discord didn't give us a correct URL?");
+                        e.printStackTrace();
+                        return;
+                    } catch (IOException e) {
+                        System.err.println("Couldn't open stream to attachment!");
+                        e.printStackTrace();
+                        return;
+                    }
+
+                    MessageCreateSpec messageCreateSpec = new MessageCreateSpec();
+                    messageCreateSpec.setContent(author.getMention());
+                    messageCreateSpec.addFile(attachment.getFilename(), fileInputStream);
+
+                    memeArchive.getRestChannel()
+                            .createMessage(messageCreateSpec.asRequest())
+                            .subscribe(msgData -> {
+                                try {
+                                    fileInputStream.close();
+                                } catch (IOException e) {
+                                    System.err.println("Couldn't close attachment stream!");
+                                    e.printStackTrace();
+                                }
+                            });
 
                     memes.remove(msg.getId().asString());
                 });
