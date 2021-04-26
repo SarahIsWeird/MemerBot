@@ -5,11 +5,11 @@ import discord4j.core.GatewayDiscordClient;
 
 public class Main {
     public static void main(String[] args) {
-        MemeStore memeStore = MemeStore.getInstance();
+        Config config = Config.getInstance();
 
-        Config.isDebug = (args.length > 0) && args[0].equalsIgnoreCase("debug");
+        boolean isDebug = (args.length > 0) && args[0].equalsIgnoreCase("debug");
 
-        if (Config.isDebug) {
+        if (isDebug) {
             System.out.println("Running in debug mode!");
         }
 
@@ -24,10 +24,12 @@ public class Main {
             System.exit(1);
         }
 
+        config.complete(isDebug, client);
+
         client.getEventDispatcher().on(new EventHandler()).subscribe();
 
         client.onDisconnect().block();
 
-        memeStore.save();
+        MemeStore.getInstance().save();
     }
 }

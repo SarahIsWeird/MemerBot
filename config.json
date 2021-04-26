@@ -1,0 +1,31 @@
+{
+    "memeStorePath": "memes.csv",
+
+    "admins": [
+        "116927399760756742",
+        "260473563310587904"
+    ],
+
+    "memeArchive": {
+        "debug": "831531360749355078",
+        "release": "775720910904623135"
+    },
+
+    "emotes": {
+        "upvote": {
+            "name": "updoot",
+            "id": "826104904057356298"
+        },
+        "downvote": {
+            "name": "downdoot",
+            "id": "826104891843805205"
+        }
+    },
+
+    "titles": [
+        "Ich habe gelacht",
+        "amogus moment o.o",
+        "Not funny didn't haha",
+        "Hab ich schon vor drei Monaten auf 4chan gesehen."
+    ]
+}

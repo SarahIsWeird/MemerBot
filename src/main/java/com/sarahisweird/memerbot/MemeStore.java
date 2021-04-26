@@ -11,7 +11,7 @@ import java.util.List;
 public class MemeStore {
     private final List<String> trackedMemes;
 
-    private static final File memeStoreFile = new File(Config.memeStoreFile);
+    private static final File memeStoreFile = new File(Config.getInstance().getMemeStorePath());
 
     private static MemeStore instance;
 

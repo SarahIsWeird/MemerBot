@@ -1,12 +1,12 @@
 package com.sarahisweird.memerbot;
 
-import discord4j.common.util.Snowflake;
 import discord4j.core.event.ReactiveEventAdapter;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.entity.Attachment;
 import discord4j.core.object.entity.Member;
+import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import discord4j.core.spec.MessageCreateSpec;
 import org.reactivestreams.Publisher;
@@ -19,15 +19,15 @@ import java.net.URL;
 import java.util.Optional;
 
 public class EventHandler extends ReactiveEventAdapter {
+    private final Config config;
+
+    public EventHandler() {
+        this.config = Config.getInstance();
+    }
+
     @Override
     public Publisher<?> onReady(ReadyEvent event) {
         return Mono.fromRunnable(() -> {
-            Snowflake memeArchiveId = Config.isDebug
-                    ? Config.memeArchiveId_debug
-                    : Config.memeArchiveId_release;
-
-            event.getClient().getChannelById(memeArchiveId).subscribe(channel -> Config.memeArchive = channel);
-
             final User self = event.getSelf();
 
             System.out.println("Logged in as " + self.getUsername() + "#" + self.getDiscriminator() + ".");
@@ -42,7 +42,7 @@ public class EventHandler extends ReactiveEventAdapter {
             if (member.isEmpty())
                 return Mono.empty();
 
-            if (!Config.admins.contains(member.get().getId().asString()))
+            if (!config.getAdmins().contains(member.get().getId().asString()))
                 return Mono.empty();
 
             return Mono.fromRunnable(() -> event.getClient().logout().subscribe());
@@ -53,6 +53,24 @@ public class EventHandler extends ReactiveEventAdapter {
         }
 
         return Mono.empty();
+    }
+
+    private int countVotes(Message msg) {
+        int votes = 0;
+
+        votes += msg.getReactors(config.getUpvoteEmote())
+                .filter(user -> config.isDebug() || !user.equals(msg.getAuthor().orElse(null)))
+                .count()
+                .blockOptional()
+                .orElse(0L);
+
+        votes -= msg.getReactors(config.getDownvoteEmote())
+                .filter(user -> config.isDebug() || !user.equals(msg.getAuthor().orElse(null)))
+                .count()
+                .blockOptional()
+                .orElse(0L);
+
+        return votes;
     }
 
     @Override
@@ -71,21 +89,9 @@ public class EventHandler extends ReactiveEventAdapter {
 
             Attachment attachment = Util.collapseAttachmentSet(msg.getAttachments());
 
-            int votes = 0;
+            int votes = countVotes(msg);
 
-            votes += msg.getReactors(Config.updootReaction)
-                    .filter(user -> Config.isDebug || !user.equals(author.get()))
-                    .count()
-                    .blockOptional()
-                    .orElse(0L);
-
-            votes -= msg.getReactors(Config.downdootReaction)
-                    .filter(user -> Config.isDebug || !user.equals(author.get()))
-                    .count()
-                    .blockOptional()
-                    .orElse(0L);
-
-            if (votes < (Config.isDebug ? 1 : 2))
+            if (votes < (config.isDebug() ? 1 : 2))
                 return Mono.empty();
 
             URL fileUrl;
@@ -108,7 +114,7 @@ public class EventHandler extends ReactiveEventAdapter {
             messageCreateSpec.setContent(author.get().getMention());
             messageCreateSpec.addFile(attachment.getFilename(), fileInputStream);
 
-            Config.memeArchive.getRestChannel()
+            config.getMemeArchive().getRestChannel()
                     .createMessage(messageCreateSpec.asRequest())
                     .subscribe(msgData -> {
                         try {

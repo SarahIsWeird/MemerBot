@@ -1,27 +1,95 @@
 package com.sarahisweird.memerbot;
 
 import discord4j.common.util.Snowflake;
+import discord4j.core.GatewayDiscordClient;
 import discord4j.core.object.entity.channel.Channel;
 import discord4j.core.object.reaction.ReactionEmoji;
+import org.json.JSONObject;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Config {
-    public static final String memeStoreFile = "memes.csv";
-    public static final List<String> admins = List.of("116927399760756742", "260473563310587904");
+    private static Config instance;
 
-    public static final Snowflake memeArchiveId_release = Snowflake.of("775720910904623135");
-    public static final Snowflake memeArchiveId_debug = Snowflake.of("831531360749355078");
+    private JSONObject json;
 
-    public static final Snowflake updootId = Snowflake.of("826104904057356298");
-    public static final ReactionEmoji updootReaction = ReactionEmoji.custom(updootId, "updoot", false);
+    private boolean isDebug;
+    private Channel memeArchive;
+    private String memeStorePath;
+    private List<String> admins;
+    private ReactionEmoji.Custom upvoteEmote;
+    private ReactionEmoji.Custom downvoteEmote;
 
-    public static final Snowflake downdootId = Snowflake.of("826104891843805205");
-    public static final ReactionEmoji downdootReaction = ReactionEmoji.custom(downdootId, "downdoot", false);
+    private Config() {
+        try {
+            json = new JSONObject(Files.readString(Path.of("config.json")));
+        } catch (IOException e) {
+            System.err.println("Couldn't read the config file!");
+            e.printStackTrace();
+            System.exit(1);
+        }
+    }
 
-    // Set on ready
-    public static boolean isDebug;
-    public static Channel memeArchive;
+    public static Config getInstance() {
+        if (instance == null)
+            instance = new Config();
 
-    private Config() {}
+        return instance;
+    }
+
+    /**
+     * Calling getter functions from the config isn't valid until this function has been executed!
+     * @param isDebug Are we running in a debug environment?
+     * @param client The Bot instance
+     */
+    public void complete(boolean isDebug, GatewayDiscordClient client) {
+        this.isDebug = isDebug;
+
+        this.memeArchive = client.getChannelById(Snowflake.of(
+                    this.json.getJSONObject("memeArchive").getString(this.isDebug ? "debug" : "release"))
+                ).block();
+
+        this.memeStorePath = this.json.getString("memeStorePath");
+        this.admins = new ArrayList<>(); // Split it because Java's a dick
+        this.json.getJSONArray("admins").forEach(id -> this.admins.add((String) id));
+
+        JSONObject emotes = this.json.getJSONObject("emotes");
+        JSONObject upvote = emotes.getJSONObject("upvote");
+        JSONObject downvote = emotes.getJSONObject("downvote");
+
+        this.upvoteEmote = ReactionEmoji.custom(Snowflake.of(upvote.getString("id")),
+                upvote.getString("name"),
+                false);
+        this.downvoteEmote = ReactionEmoji.custom(Snowflake.of(downvote.getString("id")),
+                downvote.getString("name"),
+                false);
+    }
+
+    public boolean isDebug() {
+        return this.isDebug;
+    }
+
+    public Channel getMemeArchive() {
+        return this.memeArchive;
+    }
+
+    public String getMemeStorePath() {
+        return this.memeStorePath;
+    }
+
+    public List<String> getAdmins() {
+        return this.admins;
+    }
+
+    public ReactionEmoji.Custom getUpvoteEmote() {
+        return this.upvoteEmote;
+    }
+
+    public ReactionEmoji.Custom getDownvoteEmote() {
+        return this.downvoteEmote;
+    }
 }
