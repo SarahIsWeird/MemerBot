@@ -21,4 +21,6 @@ public class Util {
     public static JSONObject deserializeJSONFromStream(InputStream stream) throws IOException {
         return new JSONObject(new String(stream.readAllBytes()));
     }
+
+    private Util() {}
 }
