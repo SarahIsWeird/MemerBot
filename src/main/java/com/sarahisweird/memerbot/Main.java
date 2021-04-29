@@ -1,5 +1,6 @@
 package com.sarahisweird.memerbot;
 
+import com.sarahisweird.memerbot.tracking.MemeStore;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
 

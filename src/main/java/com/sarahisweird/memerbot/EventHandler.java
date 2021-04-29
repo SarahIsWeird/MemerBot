@@ -1,5 +1,8 @@
 package com.sarahisweird.memerbot;
 
+import com.sarahisweird.memerbot.tracking.MemeStore;
+import com.sarahisweird.memerbot.tracking.TrackingState;
+import discord4j.common.util.Snowflake;
 import discord4j.core.event.ReactiveEventAdapter;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
@@ -9,6 +12,9 @@ import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.discordjson.json.EmbedData;
+import discord4j.discordjson.json.MessageCreateRequest;
+import discord4j.discordjson.json.MessageEditRequest;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
@@ -48,7 +54,7 @@ public class EventHandler extends ReactiveEventAdapter {
             MemeStore.getInstance().trackMeme(event.getMessage().getId());
         }
 
-        return Mono.empty();
+        return Mono.just(event.getMessage().getId());
     }
 
     private Long countUpvotes(Message msg) {
@@ -69,6 +75,7 @@ public class EventHandler extends ReactiveEventAdapter {
 
     @Override
     public Publisher<?> onReactionAdd(ReactionAddEvent event) {
+        MemeStore memeStore = MemeStore.getInstance();
         return event.getMessage().map(msg -> {
             Optional<User> author = msg.getAuthor();
 
@@ -78,33 +85,54 @@ public class EventHandler extends ReactiveEventAdapter {
             if (author.get().getId().equals(event.getClient().getSelfId())) // Don't wanna send messages by us
                 return Mono.empty();
 
-            if (!MemeStore.getInstance().isTracked(msg.getId())) // Not tracked? Don't care
+            if (!memeStore.isTracked(msg.getId())) // Not tracked? Don't care
                 return Mono.empty();
 
-            Attachment attachment = Util.collapseAttachmentSet(msg.getAttachments());
-
+            TrackingState state = memeStore.getTrackingState(msg.getId());
             Long upvotes = countUpvotes(msg);
             Long downvotes = countDownvotes(msg);
 
-            if (upvotes - downvotes < config.getRequiredVotes())
+            if (upvotes - downvotes < config.getRequiredVotes() && state == TrackingState.PENDING_ARCHIVING)
                 return Mono.empty();
 
-            EmbedCreateSpec embedCreateSpec = new EmbedCreateSpec();
-            embedCreateSpec.setTitle(config.getRandomTitle(msg));
-            embedCreateSpec.setAuthor(
-                    author.get().getUsername() + "#" + author.get().getDiscriminator(),
-                    null,
-                    author.get().getAvatarUrl()
-            );
-            embedCreateSpec.setImage(attachment.getUrl());
-            embedCreateSpec.addField(config.getUpvoteText(), upvotes.toString(), true);
-            embedCreateSpec.addField(config.getDownvoteText(), downvotes.toString(), true);
+            // Pending
+            if (state == TrackingState.PENDING_ARCHIVING) {
+                config.getMemeArchive().getRestChannel().createMessage(makeEmbed(msg, upvotes, downvotes))
+                        .subscribe(msgData -> memeStore.promote(msg.getId(), Snowflake.of(msgData.id())));
 
-            config.getMemeArchive().getRestChannel().createMessage(embedCreateSpec.asRequest()).subscribe();
+                return Mono.empty();
+            }
 
-            MemeStore.getInstance().removeTracking(msg.getId());
+            // Update votes
+            Snowflake archiveId = memeStore.getArchivedId(msg.getId());
+
+            config.getMemeArchive().getRestChannel().getRestMessage(archiveId).edit(
+                    MessageEditRequest.builder().embed(makeEmbed(msg, upvotes, downvotes)).build()
+            ).subscribe();
 
             return Mono.empty();
         });
+    }
+
+    private EmbedData makeEmbed(Message msg, Long upvotes, Long downvotes) {
+        Optional<Member> author = msg.getAuthorAsMember().blockOptional();
+
+        if (author.isEmpty())
+            return null;
+
+        Attachment attachment = Util.collapseAttachmentSet(msg.getAttachments());
+
+        EmbedCreateSpec embedCreateSpec = new EmbedCreateSpec();
+        embedCreateSpec.setTitle(config.getRandomTitle(msg));
+        embedCreateSpec.setAuthor(
+                author.get().getUsername() + "#" + author.get().getDiscriminator(),
+                null,
+                author.get().getAvatarUrl()
+        );
+        embedCreateSpec.setImage(attachment.getUrl());
+        embedCreateSpec.addField(config.getUpvoteText(), upvotes.toString(), true);
+        embedCreateSpec.addField(config.getDownvoteText(), downvotes.toString(), true);
+
+        return embedCreateSpec.asRequest();
     }
 }

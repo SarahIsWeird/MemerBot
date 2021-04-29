@@ -15,8 +15,9 @@ import java.util.*;
 public class Config {
     private static Config instance;
 
+    private final Random random;
+
     private JSONObject json;
-    private Random random;
 
     private boolean isDebug;
     private Channel memeArchive;
@@ -156,7 +157,6 @@ public class Config {
                 case "time" -> replacement = getTimedText();
                 default -> replacement = "";
             }
-            System.out.println(replacement.equals("") ? "sdfsadf" : replacement);
 
             title = title.replace("#" + selector + "#", replacement);
         }
