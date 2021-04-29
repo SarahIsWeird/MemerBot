@@ -14,6 +14,7 @@ public class MemeStore {
     private final List<TrackedEntry> trackedMemes;
 
     private static final File memeStoreFile = new File(Config.getInstance().getMemeStorePath());
+    private static int A_DAY = 60 * 60 * 24;
 
     private static MemeStore instance;
 
@@ -128,7 +129,7 @@ public class MemeStore {
                 .getArchivedId();
     }
 
-    public void removeTracking(Snowflake messageId) {
-        this.trackedMemes.removeIf(te -> te.getId().equals(messageId));
+    public void yeetOldOnes() {
+        this.trackedMemes.removeIf(te -> Instant.now().getEpochSecond() - te.getCreatedAt().getEpochSecond() > A_DAY);
     }
 }

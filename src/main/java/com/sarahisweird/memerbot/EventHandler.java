@@ -38,6 +38,8 @@ public class EventHandler extends ReactiveEventAdapter {
 
     @Override
     public Publisher<?> onMessageCreate(MessageCreateEvent event) {
+        MemeStore.getInstance().yeetOldOnes();
+
         if (event.getMessage().getContent().equalsIgnoreCase(config.getPrefix() + "quit")) {
             Optional<Member> member = event.getMember();
 
