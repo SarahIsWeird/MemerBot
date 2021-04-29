@@ -7,6 +7,7 @@ import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.ReactiveEventAdapter;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.event.domain.message.MessageDeleteEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.event.domain.message.ReactionRemoveEvent;
 import discord4j.core.object.entity.Attachment;
@@ -58,6 +59,17 @@ public class EventHandler extends ReactiveEventAdapter {
         }
 
         return Mono.just(event.getMessage().getId());
+    }
+
+    @Override
+    public Publisher<?> onMessageDelete(MessageDeleteEvent event) {
+        MemeStore memeStore = MemeStore.getInstance();
+        Snowflake id = event.getMessageId();
+
+        if (memeStore.isTrackedFromArchiveId(id))
+            memeStore.removeFromArchiveId(id);
+
+        return Mono.empty();
     }
 
     private Long countUpvotes(Message msg) {

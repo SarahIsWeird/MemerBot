@@ -102,6 +102,12 @@ public class MemeStore {
                 .anyMatch(te -> te.getId().asString().equals(messageId));
     }
 
+    public boolean isTrackedFromArchiveId(Snowflake archiveId) {
+        return this.trackedMemes
+                .stream()
+                .anyMatch(te -> te.getArchivedId().equals(archiveId));
+    }
+
     public TrackingState getTrackingState(Snowflake messageId) {
         return this.trackedMemes
                 .stream()
@@ -131,5 +137,9 @@ public class MemeStore {
 
     public void yeetOldOnes() {
         this.trackedMemes.removeIf(te -> Instant.now().getEpochSecond() - te.getCreatedAt().getEpochSecond() > A_DAY);
+    }
+
+    public void removeFromArchiveId(Snowflake archiveId) {
+        this.trackedMemes.removeIf(te -> te.getArchivedId().equals(archiveId));
     }
 }
