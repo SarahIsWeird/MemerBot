@@ -3,17 +3,18 @@ package com.sarahisweird.memerbot;
 import com.sarahisweird.memerbot.tracking.MemeStore;
 import com.sarahisweird.memerbot.tracking.TrackingState;
 import discord4j.common.util.Snowflake;
+import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.ReactiveEventAdapter;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
+import discord4j.core.event.domain.message.ReactionRemoveEvent;
 import discord4j.core.object.entity.Attachment;
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.discordjson.json.EmbedData;
-import discord4j.discordjson.json.MessageCreateRequest;
 import discord4j.discordjson.json.MessageEditRequest;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -77,43 +78,57 @@ public class EventHandler extends ReactiveEventAdapter {
 
     @Override
     public Publisher<?> onReactionAdd(ReactionAddEvent event) {
-        MemeStore memeStore = MemeStore.getInstance();
         return event.getMessage().map(msg -> {
-            Optional<User> author = msg.getAuthor();
-
-            if (author.isEmpty()) // Empty author, for whatever reason
-                return Mono.empty();
-
-            if (author.get().getId().equals(event.getClient().getSelfId())) // Don't wanna send messages by us
-                return Mono.empty();
-
-            if (!memeStore.isTracked(msg.getId())) // Not tracked? Don't care
-                return Mono.empty();
-
-            TrackingState state = memeStore.getTrackingState(msg.getId());
-            Long upvotes = countUpvotes(msg);
-            Long downvotes = countDownvotes(msg);
-
-            if (upvotes - downvotes < config.getRequiredVotes() && state == TrackingState.PENDING_ARCHIVING)
-                return Mono.empty();
-
-            // Pending
-            if (state == TrackingState.PENDING_ARCHIVING) {
-                config.getMemeArchive().getRestChannel().createMessage(makeEmbed(msg, upvotes, downvotes))
-                        .subscribe(msgData -> memeStore.promote(msg.getId(), Snowflake.of(msgData.id())));
-
-                return Mono.empty();
-            }
-
-            // Update votes
-            Snowflake archiveId = memeStore.getArchivedId(msg.getId());
-
-            config.getMemeArchive().getRestChannel().getRestMessage(archiveId).edit(
-                    MessageEditRequest.builder().embed(makeEmbed(msg, upvotes, downvotes)).build()
-            ).subscribe();
+            sendOrEditMessage(msg, event.getClient());
 
             return Mono.empty();
         });
+    }
+
+    @Override
+    public Publisher<?> onReactionRemove(ReactionRemoveEvent event) {
+        return event.getMessage().map(msg -> {
+            sendOrEditMessage(msg, event.getClient());
+
+            return Mono.empty();
+        });
+    }
+
+    private void sendOrEditMessage(Message msg, GatewayDiscordClient client) {
+        Optional<User> author = msg.getAuthor();
+
+        if (author.isEmpty()) // Empty author, for whatever reason
+            return;
+
+        if (author.get().getId().equals(client.getSelfId())) // Don't wanna send messages by us
+            return;
+
+        if (!MemeStore.getInstance().isTracked(msg.getId())) // Not tracked? Don't care
+            return;
+
+        MemeStore memeStore = MemeStore.getInstance();
+
+        TrackingState state = memeStore.getTrackingState(msg.getId());
+        Long upvotes = countUpvotes(msg);
+        Long downvotes = countDownvotes(msg);
+
+        if (upvotes - downvotes < config.getRequiredVotes() && state == TrackingState.PENDING_ARCHIVING)
+            return;
+
+        // Pending
+        if (state == TrackingState.PENDING_ARCHIVING) {
+            config.getMemeArchive().getRestChannel().createMessage(makeEmbed(msg, upvotes, downvotes))
+                    .subscribe(msgData -> memeStore.promote(msg.getId(), Snowflake.of(msgData.id())));
+
+            return;
+        }
+
+        // Update votes
+        Snowflake archiveId = memeStore.getArchivedId(msg.getId());
+
+        config.getMemeArchive().getRestChannel().getRestMessage(archiveId).edit(
+                MessageEditRequest.builder().embed(makeEmbed(msg, upvotes, downvotes)).build()
+        ).subscribe();
     }
 
     private EmbedData makeEmbed(Message msg, Long upvotes, Long downvotes) {
