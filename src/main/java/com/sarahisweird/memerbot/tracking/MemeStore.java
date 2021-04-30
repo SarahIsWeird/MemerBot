@@ -14,7 +14,7 @@ public class MemeStore {
     private final List<TrackedEntry> trackedMemes;
 
     private static final File memeStoreFile = new File(Config.getInstance().getMemeStorePath());
-    private static int A_DAY = 60 * 60 * 24;
+    private static final int A_DAY = 60 * 60 * 24;
 
     private static MemeStore instance;
 
