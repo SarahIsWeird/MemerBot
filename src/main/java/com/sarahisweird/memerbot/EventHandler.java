@@ -233,6 +233,12 @@ public class EventHandler extends ReactiveEventAdapter {
                         + "**wetten**, **bet**, **gamble** - Verwette dein Geld!\n"
                         + "**raub**, **rauben**, **rob** - Raube jemanden aus! (Maximal 10%)\n"
                         + "**daily** - Bekomme dein Daily.\n"
+                        + "**uwus** - Zeigt an, wie oft du schon uwu geschrieben hast.\n"
+                        + "**owos** - Zeigt an, wie oft du schon owo geschrieben hast.\n"
+                        + "**topuwu**, **topuwus** - Zeigt die 10 Leute an, die am meisten "
+                            + "`uwu` geschrieben haben.\n"
+                        + "**topowo**, **topowos** - Zeigt die 10 Leute an, die am meisten "
+                            + "`owo` geschrieben haben.\n"
                 ).subscribe();
             }
             case "b", "bal", "balance", "k", "konto", "kontostand" -> {
