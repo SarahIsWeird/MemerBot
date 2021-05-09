@@ -1,5 +1,6 @@
 package com.sarahisweird.memerbot;
 
+import com.sarahisweird.memerbot.economy.EcoDB;
 import com.sarahisweird.memerbot.tracking.MemeStore;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
@@ -32,5 +33,6 @@ public class Main {
         client.onDisconnect().block();
 
         MemeStore.getInstance().save();
+        EcoDB.getInstance().save();
     }
 }

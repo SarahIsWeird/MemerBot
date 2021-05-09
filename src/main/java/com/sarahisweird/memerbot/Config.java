@@ -25,6 +25,7 @@ public class Config {
     private List<String> admins;
     private ReactionEmoji.Custom upvoteEmote;
     private ReactionEmoji.Custom downvoteEmote;
+    private String kekwEmoteString;
     private int requiredVotes;
     private String prefix;
     private List<String> titles;
@@ -35,6 +36,8 @@ public class Config {
     private String afternoonText;
     private String eveningText;
     private String nightText;
+    private Map<String, Long> cooldowns;
+    private double maxRobPercentage;
 
     private Config() {
         try {
@@ -77,9 +80,17 @@ public class Config {
         this.titles = new ArrayList<>(); // Ditto
         this.json.getJSONArray("titles").forEach(id -> this.titles.add((String) id));
 
+        this.cooldowns = new HashMap<>(); // Tritto? lol
+        this.json.getJSONArray("cooldowns").forEach(o -> {
+            JSONObject obj = (JSONObject) o;
+            this.cooldowns.put(obj.getString("command"),
+                    Util.parseDuration(obj.getString("cooldown")));
+        });
+
         JSONObject emotes = this.json.getJSONObject("emotes");
         JSONObject upvote = emotes.getJSONObject("upvote");
         JSONObject downvote = emotes.getJSONObject("downvote");
+        JSONObject kekw = emotes.getJSONObject("kekw");
 
         this.upvoteEmote = ReactionEmoji.custom(Snowflake.of(upvote.getString("id")),
                 upvote.getString("name"),
@@ -87,6 +98,7 @@ public class Config {
         this.downvoteEmote = ReactionEmoji.custom(Snowflake.of(downvote.getString("id")),
                 downvote.getString("name"),
                 false);
+        this.kekwEmoteString = "<:kekw:" + kekw.getString(selector) + ">";
 
         this.requiredVotes = this.json.getJSONObject("requiredVotes").getInt(selector);
 
@@ -104,6 +116,8 @@ public class Config {
         this.afternoonText = timeTexts.getString("afternoon");
         this.eveningText = timeTexts.getString("evening");
         this.nightText = timeTexts.getString("night");
+
+        this.maxRobPercentage = this.json.getDouble("maxRobPercentage");
     }
 
     public boolean isDebug() {
@@ -128,6 +142,10 @@ public class Config {
 
     public ReactionEmoji.Custom getDownvoteEmote() {
         return this.downvoteEmote;
+    }
+
+    public String getKekwEmoteString() {
+        return this.kekwEmoteString;
     }
 
     public int getRequiredVotes() {
@@ -186,5 +204,13 @@ public class Config {
         } else {
             return this.nightText;
         }
+    }
+
+    public long getCooldown(String command) {
+        return this.cooldowns.getOrDefault(command, 0L);
+    }
+
+    public double getMaxRobPercentage() {
+        return this.maxRobPercentage;
     }
 }

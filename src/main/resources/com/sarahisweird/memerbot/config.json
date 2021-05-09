@@ -29,6 +29,10 @@
         "downvote": {
             "name": "downdoot",
             "id": "826104891843805205"
+        },
+        "kekw": {
+            "debug": "840653407496831046",
+            "release": "776910586591051806"
         }
     },
 
@@ -59,5 +63,34 @@
             "evening": "Heiazeit",
             "night": "Nacht. Alle schlafen"
         }
-    }
+    },
+
+    "cooldowns": [
+        {
+            "command": "balance",
+            "cooldown": "5s"
+        },
+        {
+            "command": "freerealestate",
+            "cooldown": "10m"
+        },
+        {
+            "command": "simp",
+            "cooldown": "10m"
+        },
+        {
+            "command": "gamble",
+            "cooldown": "10s"
+        },
+        {
+            "command": "rob",
+            "cooldown": "1h"
+        },
+        {
+            "command": "daily",
+            "cooldown": "1d"
+        }
+    ],
+
+    "maxRobPercentage": 0.2
 }
