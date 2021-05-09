@@ -520,7 +520,7 @@ public class EventHandler extends ReactiveEventAdapter {
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean checkArgCount(Message msg, String[] args, int count) {
         if (args.length != count) {
-            msg.addReaction(ReactionEmoji.unicode("❓"));
+            msg.addReaction(ReactionEmoji.unicode("❓")).subscribe();
             return false;
         }
 
