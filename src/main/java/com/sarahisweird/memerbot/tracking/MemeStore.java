@@ -40,11 +40,17 @@ public class MemeStore {
         for (String savedMeme : savedMemes) {
             String[] data = savedMeme.split(",");
 
+            Snowflake archivedId;
+            if (data[3].equals(""))
+                archivedId = null;
+            else
+                archivedId = Snowflake.of(data[3]);
+
             this.trackedMemes.add(new TrackedEntry(
                     Snowflake.of(data[0]),
                     Instant.ofEpochSecond(Long.parseLong(data[1])),
                     TrackingState.valueOf(data[2]),
-                    Snowflake.of(data[3])
+                    archivedId
             ));
         }
     }
@@ -57,10 +63,18 @@ public class MemeStore {
                 if (memeCSV.length() != 0)
                     memeCSV.append("\n");
 
+                String archivedIdStr;
+                Snowflake archivedId = trackedEntry.getArchivedId();
+
+                if (archivedId == null)
+                    archivedIdStr = "";
+                else
+                    archivedIdStr = archivedId.asString();
+
                 memeCSV.append(trackedEntry.getId().asString())
                         .append(',').append(trackedEntry.getCreatedAt().getEpochSecond())
                         .append(',').append(trackedEntry.getTrackingState().toString())
-                        .append(',').append(trackedEntry.getArchivedId().asString());
+                        .append(',').append(archivedIdStr);
             }
         }
 
