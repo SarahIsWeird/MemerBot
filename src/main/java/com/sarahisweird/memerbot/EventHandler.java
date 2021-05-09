@@ -208,15 +208,17 @@ public class EventHandler extends ReactiveEventAdapter {
             case "hilfe", "?", "help" -> {
                 if (!checkCooldown(channel, sender, "help")) return;
 
-                channel.createMessage("```"
-                        + "hilfe, help, ? - Zeigt dieses Menü an.\n"
-                        + "b, bal, balance, k, konto, kontostand - Zeigt deinen Kontostand an.\n"
-                        + "simp - Juan Borja simpt für dich!\n"
-                        + "fre, free, freerealestate - It's free real estate!\n"
-                        + "wetten, bet, gamble - Verwette dein Geld!\n"
-                        + "raub, rauben, rob - Raube jemanden aus! (Maximal 10%)\n"
-                        + "daily - Bekomme dein Daily.\n"
-                        + "```").subscribe();
+                channel.createMessage("**__Hilfe__**\n"
+                        + "\n"
+                        + "**hilfe**, **help**, **?** - Zeigt dieses Menü an.\n"
+                        + "**b**, **bal**, **balance**, **k**, **konto**, **kontostand** "
+                            + "- Zeigt deinen Kontostand an.\n"
+                        + "**simp** - Juan Borja simpt für dich!\n"
+                        + "**fre**, **free**, **freerealestate** - It's free real estate!\n"
+                        + "**wetten**, **bet**, **gamble** - Verwette dein Geld!\n"
+                        + "**raub**, **rauben**, **rob** - Raube jemanden aus! (Maximal 10%)\n"
+                        + "**daily** - Bekomme dein Daily.\n"
+                ).subscribe();
             }
             case "b", "bal", "balance", "k", "konto", "kontostand" -> {
                 if (!checkCooldown(channel, sender, "balance")) return;
