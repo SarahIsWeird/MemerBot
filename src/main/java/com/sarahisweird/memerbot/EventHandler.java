@@ -62,13 +62,14 @@ public class EventHandler extends ReactiveEventAdapter {
 
         String content = msg.getContent();
 
-        if (content.toLowerCase().contains("uwu")) {
-            UwuCounter.getInstance().add(msg.getAuthor().get().getId());
-        }
+        if (msg.getChannelId().equals(config.getRandomChannelId()))
+            if (content.toLowerCase().contains("uwu")) {
+                UwuCounter.getInstance().add(msg.getAuthor().get().getId());
+            }
 
-        if (content.toLowerCase().contains("owo")) {
-            OwoCounter.getInstance().add(msg.getAuthor().get().getId());
-        }
+            if (content.toLowerCase().contains("owo")) {
+                OwoCounter.getInstance().add(msg.getAuthor().get().getId());
+            }
 
         if (content.startsWith(config.getPrefix())) {
             handleCommand(event);

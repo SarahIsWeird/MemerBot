@@ -38,6 +38,7 @@ public class Config {
     private String nightText;
     private Map<String, Long> cooldowns;
     private double maxRobPercentage;
+    private Snowflake randomChannelId;
 
     private Config() {
         try {
@@ -118,6 +119,9 @@ public class Config {
         this.nightText = timeTexts.getString("night");
 
         this.maxRobPercentage = this.json.getDouble("maxRobPercentage");
+
+        this.randomChannelId = Snowflake.of(this.json.getJSONObject("randomChannel")
+                .getString(selector));
     }
 
     public boolean isDebug() {
@@ -212,5 +216,9 @@ public class Config {
 
     public double getMaxRobPercentage() {
         return this.maxRobPercentage;
+    }
+
+    public Snowflake getRandomChannelId() {
+        return this.randomChannelId;
     }
 }

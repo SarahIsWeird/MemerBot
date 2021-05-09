@@ -16,11 +16,6 @@
         "release": "775720910904623135"
     },
 
-    "randomChannel": {
-        "debug": "598275226551320623",
-        "release": "765276336985473035"
-    },
-
     "requiredVotes": {
         "debug": 1,
         "release": 2
@@ -105,5 +100,10 @@
         }
     ],
 
-    "maxRobPercentage": 0.2
+    "maxRobPercentage": 0.2,
+
+    "randomChannel": {
+        "debug": "598275226551320623",
+        "release": "765276336985473035"
+    }
 }
