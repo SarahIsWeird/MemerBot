@@ -6,7 +6,8 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Util {
 
@@ -74,6 +75,34 @@ public class Util {
             sb.append(seconds).append(" Sekunde").append(seconds > 1 ? "n" : "");
 
         return sb.toString();
+    }
+
+    public static <K, V extends Comparable<V>> List<Map.Entry<K, V>> sortMap(Map<K, V> map) {
+        return sortEntryList(new ArrayList<>(map.entrySet()));
+    }
+
+    public static <K, V extends Comparable<V>> List<Map.Entry<K, V>> sortEntryList(List<Map.Entry<K, V>> list) {
+        List<Map.Entry<K, V>> left = new ArrayList<>();
+        List<Map.Entry<K, V>> right = new ArrayList<>();
+
+        Map.Entry<K, V> pivot = list.get(list.size() - 1);
+
+        for (Map.Entry<K, V> l : list) {
+            if (pivot.getValue().compareTo(l.getValue()) > 0)
+                left.add(l);
+            else if (!l.getKey().equals(pivot.getKey()))
+                right.add(l);
+        }
+
+        if (left.size() > 1)
+            left = sortEntryList(left);
+
+        if (right.size() > 1)
+            right = sortEntryList(right);
+
+        left.add(pivot);
+        left.addAll(right);
+        return left;
     }
 
     private Util() {}

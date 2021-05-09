@@ -16,6 +16,11 @@
         "release": "775720910904623135"
     },
 
+    "randomChannel": {
+        "debug": "598275226551320623",
+        "release": "765276336985473035"
+    },
+
     "requiredVotes": {
         "debug": 1,
         "release": 2
@@ -89,6 +94,14 @@
         {
             "command": "daily",
             "cooldown": "1d"
+        },
+        {
+            "command": "topuwus",
+            "cooldown": "5m"
+        },
+        {
+            "command": "topowos",
+            "cooldown": "5m"
         }
     ],
 

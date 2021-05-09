@@ -2,6 +2,8 @@ package com.sarahisweird.memerbot;
 
 import com.sarahisweird.memerbot.economy.EcoDB;
 import com.sarahisweird.memerbot.tracking.MemeStore;
+import com.sarahisweird.memerbot.tracking.OwoCounter;
+import com.sarahisweird.memerbot.tracking.UwuCounter;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
 
@@ -34,5 +36,7 @@ public class Main {
 
         MemeStore.getInstance().save();
         EcoDB.getInstance().save();
+        UwuCounter.getInstance().save();
+        OwoCounter.getInstance().save();
     }
 }

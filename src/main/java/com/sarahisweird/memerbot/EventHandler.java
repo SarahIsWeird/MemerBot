@@ -2,7 +2,9 @@ package com.sarahisweird.memerbot;
 
 import com.sarahisweird.memerbot.economy.EcoDB;
 import com.sarahisweird.memerbot.tracking.MemeStore;
+import com.sarahisweird.memerbot.tracking.OwoCounter;
 import com.sarahisweird.memerbot.tracking.TrackingState;
+import com.sarahisweird.memerbot.tracking.UwuCounter;
 import discord4j.common.util.Snowflake;
 import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.ReactiveEventAdapter;
@@ -11,10 +13,7 @@ import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.event.domain.message.MessageDeleteEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.event.domain.message.ReactionRemoveEvent;
-import discord4j.core.object.entity.Attachment;
-import discord4j.core.object.entity.Member;
-import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.User;
+import discord4j.core.object.entity.*;
 import discord4j.core.object.reaction.ReactionEmoji;
 import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.discordjson.json.EmbedData;
@@ -25,18 +24,20 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
-import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 public class EventHandler extends ReactiveEventAdapter {
     private final Config config;
     private final EcoDB ecoDB;
+    private final UwuCounter uwuCounter;
+    private final OwoCounter owoCounter;
     private final Random random;
 
     public EventHandler() {
         this.config = Config.getInstance();
         this.ecoDB = EcoDB.getInstance();
+        this.uwuCounter = UwuCounter.getInstance();
+        this.owoCounter = OwoCounter.getInstance();
         this.random = new Random();
     }
 
@@ -56,8 +57,18 @@ public class EventHandler extends ReactiveEventAdapter {
         Message msg = event.getMessage();
 
         if (msg.getGuildId().isEmpty()) return Mono.empty();
+        if (msg.getAuthor().isEmpty()) return Mono.empty();
+        if (event.getClient().getSelfId().equals(msg.getAuthor().get().getId())) return Mono.empty();
 
         String content = msg.getContent();
+
+        if (content.toLowerCase().contains("uwu")) {
+            UwuCounter.getInstance().add(msg.getAuthor().get().getId());
+        }
+
+        if (content.toLowerCase().contains("owo")) {
+            OwoCounter.getInstance().add(msg.getAuthor().get().getId());
+        }
 
         if (content.startsWith(config.getPrefix())) {
             handleCommand(event);
@@ -182,7 +193,7 @@ public class EventHandler extends ReactiveEventAdapter {
 
         String[] parts = content.substring(config.getPrefix().length()).split(" ");
 
-        String cmd = parts[0];
+        String cmd = parts[0].toLowerCase();
         String fullArgs;
         String[] args = new String[0];
 
@@ -427,6 +438,46 @@ public class EventHandler extends ReactiveEventAdapter {
                 channel.createMessage("Hier, dein Daily! **" + kekws + "** "
                         + config.getKekwEmoteString() + "s!").subscribe();
             }
+            case "uwus" -> {
+                this.uwuCounter.subtract(senderId);
+                long uwus = this.uwuCounter.get(senderId);
+
+                channel.createMessage("Du hast **" + uwus + "** Mal "
+                        + " `uwu` geschrieben.").subscribe();
+            }
+            case "topuwu", "topuwus" -> {
+                this.uwuCounter.subtract(senderId);
+                if (!checkCooldown(channel, sender, "topuwus")) return;
+
+                channel.type().subscribe();
+
+                List<Map.Entry<Snowflake, Long>> uwus = this.uwuCounter.getTop(0, 10);
+                Guild guild = msg.getGuild().block();
+                String topStr = buildCounterString(uwus, guild, "UwUs");
+
+                channel.createMessage("**__UwUs__** *(Die Top 10)*\n"
+                        + topStr).subscribe();
+            }
+            case "owos" -> {
+                this.owoCounter.subtract(senderId);
+                long owos = this.owoCounter.get(senderId);
+
+                channel.createMessage("Du hast **" + owos + "** Mal "
+                        + " `owo` geschrieben.").subscribe();
+            }
+            case "topowo", "topowos" -> {
+                this.owoCounter.subtract(senderId);
+                if (!checkCooldown(channel, sender, "topowos")) return;
+
+                channel.type().subscribe();
+
+                List<Map.Entry<Snowflake, Long>> owos = this.owoCounter .getTop(0, 10);
+                Guild guild = msg.getGuild().block();
+                String topStr = buildCounterString(owos, guild, "OwOs");
+
+                channel.createMessage("**__OwOs__** *(Die Top 10)*\n"
+                        + topStr).subscribe();
+            }
         }
     }
 
@@ -467,5 +518,24 @@ public class EventHandler extends ReactiveEventAdapter {
         }
 
         return true;
+    }
+
+    public String buildCounterString(List<Map.Entry<Snowflake, Long>> tops, Guild guild, String ofWhat) {
+        StringBuilder sb = new StringBuilder();
+
+        for (Map.Entry<Snowflake, Long> entry : tops) {
+            Member member = guild.getMemberById(entry.getKey()).block();
+            if (member == null) continue;
+
+            sb.append("*")
+                    .append(member.getDisplayName())
+                    .append("* - **")
+                    .append(entry.getValue())
+                    .append("** ")
+                    .append(ofWhat)
+                    .append("\n");
+        }
+
+        return sb.toString();
     }
 }
