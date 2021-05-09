@@ -208,7 +208,11 @@ public class EventHandler extends ReactiveEventAdapter {
             case "hilfe", "?", "help" -> {
                 if (!checkCooldown(channel, sender, "help")) return;
 
-                channel.createMessage("**__Hilfe__**\n"
+                String version = this.getClass().getPackage().getImplementationVersion();
+
+                if (version == null) version = "Staging";
+
+                channel.createMessage("**__Hilfe__** - *MemerBot " + version + "*\n"
                         + "\n"
                         + "**hilfe**, **help**, **?** - Zeigt dieses Menü an.\n"
                         + "**b**, **bal**, **balance**, **k**, **konto**, **kontostand** "
