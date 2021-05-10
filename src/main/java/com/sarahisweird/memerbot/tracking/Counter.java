@@ -70,6 +70,6 @@ public class Counter {
     }
 
     public List<Map.Entry<Snowflake, Long>> getTop(int from, int to) {
-        return Util.sortMap(this.counts).subList(from, Math.min(to, this.counts.size()));
+        return Util.reverseSortMap(this.counts).subList(from, Math.min(to, this.counts.size()));
     }
 }

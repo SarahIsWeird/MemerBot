@@ -1,6 +1,7 @@
 package com.sarahisweird.memerbot;
 
 import com.sarahisweird.memerbot.economy.EcoDB;
+import com.sarahisweird.memerbot.economy.EcoEntry;
 import com.sarahisweird.memerbot.tracking.MemeStore;
 import com.sarahisweird.memerbot.tracking.OwoCounter;
 import com.sarahisweird.memerbot.tracking.TrackingState;
@@ -209,6 +210,8 @@ public class EventHandler extends ReactiveEventAdapter {
         Snowflake senderId = sender.getId();
 
         RestChannel channel = msg.getRestChannel();
+        Guild guild = msg.getGuild().block();
+        if (guild == null) return;
 
         boolean senderIsAdmin = config.getAdmins().contains(sender.getId().asString());
 
@@ -263,6 +266,31 @@ public class EventHandler extends ReactiveEventAdapter {
                 channel.createMessage("Du hast **" + balance + "** "
                         + config.getKekwEmoteString() + "s.")
                         .subscribe();
+            }
+            case "baltop", "topbal" -> {
+                if (!checkCooldown(channel, sender, "topbal")) return;
+
+                channel.type().subscribe();
+
+                List<Map.Entry<Snowflake, EcoEntry>> kekws = this.ecoDB.getTop(0, 10);
+                StringBuilder sb = new StringBuilder();
+
+                for (Map.Entry<Snowflake, EcoEntry> entry : kekws) {
+                    Member member = guild.getMemberById(entry.getKey()).block();
+                    if (member == null) continue;
+
+                    sb.append("*")
+                            .append(member.getDisplayName())
+                            .append("* - **")
+                            .append(entry.getValue().getBalance())
+                            .append("** ")
+                            .append(config.getKekwEmoteString())
+                            .append("s")
+                            .append("\n");
+                }
+
+                channel.createMessage("**__" + config.getKekwEmoteString()
+                        + "__** *(Die Top 10)*\n" + sb).subscribe();
             }
             case "simp" -> {
                 if (!checkCooldown(channel, sender, "simp")) return;
@@ -446,40 +474,46 @@ public class EventHandler extends ReactiveEventAdapter {
                         + config.getKekwEmoteString() + "s!").subscribe();
             }
             case "uwus" -> {
-                this.uwuCounter.subtract(senderId);
+                if (msg.getChannelId().equals(config.getRandomChannelId()))
+                    this.uwuCounter.subtract(senderId);
+
                 long uwus = this.uwuCounter.get(senderId);
 
                 channel.createMessage("Du hast **" + uwus + "** Mal "
                         + " `uwu` geschrieben.").subscribe();
             }
             case "topuwu", "topuwus" -> {
-                this.uwuCounter.subtract(senderId);
+                if (msg.getChannelId().equals(config.getRandomChannelId()))
+                    this.uwuCounter.subtract(senderId);
+
                 if (!checkCooldown(channel, sender, "topuwus")) return;
 
                 channel.type().subscribe();
 
                 List<Map.Entry<Snowflake, Long>> uwus = this.uwuCounter.getTop(0, 10);
-                Guild guild = msg.getGuild().block();
                 String topStr = buildCounterString(uwus, guild, "UwUs");
 
                 channel.createMessage("**__UwUs__** *(Die Top 10)*\n"
                         + topStr).subscribe();
             }
             case "owos" -> {
-                this.owoCounter.subtract(senderId);
+                if (msg.getChannelId().equals(config.getRandomChannelId()))
+                    this.owoCounter.subtract(senderId);
+
                 long owos = this.owoCounter.get(senderId);
 
                 channel.createMessage("Du hast **" + owos + "** Mal "
                         + " `owo` geschrieben.").subscribe();
             }
             case "topowo", "topowos" -> {
-                this.owoCounter.subtract(senderId);
+                if (msg.getChannelId().equals(config.getRandomChannelId()))
+                    this.owoCounter.subtract(senderId);
+
                 if (!checkCooldown(channel, sender, "topowos")) return;
 
                 channel.type().subscribe();
 
-                List<Map.Entry<Snowflake, Long>> owos = this.owoCounter .getTop(0, 10);
-                Guild guild = msg.getGuild().block();
+                List<Map.Entry<Snowflake, Long>> owos = this.owoCounter.getTop(0, 10);
                 String topStr = buildCounterString(owos, guild, "OwOs");
 
                 channel.createMessage("**__OwOs__** *(Die Top 10)*\n"

@@ -1,5 +1,6 @@
 package com.sarahisweird.memerbot.economy;
 
+import com.sarahisweird.memerbot.Util;
 import discord4j.common.util.Snowflake;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -8,6 +9,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -115,5 +118,9 @@ public class EcoDB {
     private void checkExists(Snowflake userId) {
         if (!this.ecoEntries.containsKey(userId))
             this.addUser(userId);
+    }
+
+    public List<Map.Entry<Snowflake, EcoEntry>> getTop(int from, int to) {
+        return Util.reverseSortMap(this.ecoEntries).subList(from, Math.min(to, this.ecoEntries.size()));
     }
 }

@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class MemeStore {
     private final List<TrackedEntry> trackedMemes;
@@ -113,12 +114,14 @@ public class MemeStore {
     public boolean isTracked(String messageId) {
         return this.trackedMemes
                 .stream()
+                .filter(Objects::nonNull)
                 .anyMatch(te -> te.getId().asString().equals(messageId));
     }
 
     public boolean isTrackedFromArchiveId(Snowflake archiveId) {
         return this.trackedMemes
                 .stream()
+                .filter(Objects::nonNull)
                 .anyMatch(te -> te.getArchivedId().equals(archiveId));
     }
 

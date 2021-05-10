@@ -7,7 +7,6 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Util {
 
@@ -78,31 +77,35 @@ public class Util {
     }
 
     public static <K, V extends Comparable<V>> List<Map.Entry<K, V>> sortMap(Map<K, V> map) {
-        return sortEntryList(new ArrayList<>(map.entrySet()));
+        return sortEntryList(new ArrayList<>(map.entrySet()), false);
     }
 
-    public static <K, V extends Comparable<V>> List<Map.Entry<K, V>> sortEntryList(List<Map.Entry<K, V>> list) {
+    public static <K, V extends Comparable<V>> List<Map.Entry<K, V>> sortEntryList(List<Map.Entry<K, V>> list, boolean reverse) {
         List<Map.Entry<K, V>> left = new ArrayList<>();
         List<Map.Entry<K, V>> right = new ArrayList<>();
 
         Map.Entry<K, V> pivot = list.get(list.size() - 1);
 
         for (Map.Entry<K, V> l : list) {
-            if (pivot.getValue().compareTo(l.getValue()) > 0)
+            if ((reverse ? -1 : 1) * pivot.getValue().compareTo(l.getValue()) > 0)
                 left.add(l);
             else if (!l.getKey().equals(pivot.getKey()))
                 right.add(l);
         }
 
         if (left.size() > 1)
-            left = sortEntryList(left);
+            left = sortEntryList(left, reverse);
 
         if (right.size() > 1)
-            right = sortEntryList(right);
+            right = sortEntryList(right, reverse);
 
         left.add(pivot);
         left.addAll(right);
         return left;
+    }
+
+    public static <K, V extends Comparable<V>> List<Map.Entry<K, V>> reverseSortMap(Map<K, V> map) {
+        return sortEntryList(new ArrayList<>(map.entrySet()), true);
     }
 
     private Util() {}
